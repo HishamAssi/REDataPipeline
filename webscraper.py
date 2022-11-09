@@ -1,6 +1,7 @@
 from typing import Dict
 
 from bs4 import BeautifulSoup
+import lxml.html
 import requests
 from csv import writer
 import time
@@ -10,6 +11,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+import json
 
 
 class HouseSigmaScraper:
@@ -23,6 +25,7 @@ class HouseSigmaScraper:
         chrome_options = Options()
         chrome_options.add_argument("user-data-dir=selenium")
         self.driver=webdriver.Chrome(options=chrome_options)
+        self.state = state
 
 
     def login(self):
@@ -39,22 +42,47 @@ class HouseSigmaScraper:
         time.sleep(2)
 
     def get_data_list(self):
-        self.driver.navigate().to(self.url)
-        time.sleep(2)
-        response = requests.get(test_url, headers=self.agent)
-        soup = BeautifulSoup(response.text, 'lxml')
-        print(soup)
-        return et.HTML(str(soup))
+        self.driver.get(self.url)
+        time.sleep(5)
+        soup = BeautifulSoup(self.driver.page_source, 'lxml')
+        all_links = soup.select('div.el-card__body')
+        all_listings = []
+        domain = "https://housesigma.com"
+        for div in all_links:
+
+            print(div.find('a')['href'])
+            all_listings.append(self.get_data(domain+div.find('a')['href']))
+
+        return all_listings
 
     def get_data(self, listing_url):
-        self.driver.navigate().to(listing_url)
-        time.sleep(2)
-        full_list=driver.find_element(By.CLASS_NAME, "item")
-        return full_list
+        self.driver.get(listing_url)
+        time.sleep(5)
+        soup=BeautifulSoup(self.driver.page_source, 'lxml')
+        items = {}
+        for div in soup.select('div.item'):
+            # items[div.h2.text] = div.span.text
+            if(div.find("h2") and div.find("span")):
+                items[div.find("h2").string] = div.find("span").string
+            print(div)
+            print(div.find("h2"))
+            print(div.find("span"))
+            # print(div.find())
+        return items
+
+    def write_data_to_file(self, data):
+        with open("./data/extracted_{}.json".format(self.state), "w") as output:
+            json.dump(json.dumps(data), output)
 
 
 
-test_url = "https://housesigma.com/web/en/house/aD6p781zvPr3wRQr/6680-93-Hwy-County-Rd-Tay-L0K2E0-S5818021-S5818021-40343185"
+
+
+
+# test_url = "https://housesigma.com/web/en/house/aD6p781zvPr3wRQr/6680-93-Hwy-County-Rd-Tay-L0K2E0-S5818021-S5818021-40343185"
 scraper = HouseSigmaScraper('sold')
-scraper.login()
-time.sleep(10)
+data = scraper.get_data_list()
+scraper.write_data_to_file(data)
+
+# import os
+# print(os.getcwd())
