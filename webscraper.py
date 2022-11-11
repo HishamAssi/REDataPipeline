@@ -1,5 +1,5 @@
 from typing import Dict
-
+import requests
 from bs4 import BeautifulSoup
 import lxml.html
 import requests
@@ -12,12 +12,12 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import json
+import browser_cookie3
+from login_credentials import username,password
+
 
 
 class HouseSigmaScraper:
-    agent = {"User-agent": \
-                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 \
-                  (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36"}
     states: Dict[str, str] = {'sold': 'justsold', 'listed': 'newlylisted'}
 
     def __init__(self, state='sold'):
@@ -35,9 +35,9 @@ class HouseSigmaScraper:
             click()
         time.sleep(2)
         self.driver.find_element(By.XPATH, "//*[@id=\"pane-email\"]/form/div[1]/div/div/input").\
-            send_keys("")
+            send_keys(username)
         self.driver.find_element(By.XPATH, "//*[@id=\"pane-email\"]/form/div[2]/div/div/input"). \
-            send_keys("")
+            send_keys(password)
         self.driver.find_element(By.XPATH, "//*[@id=\"login\"]/div[2]/div/div[3]/button").click()
         time.sleep(2)
 
@@ -56,12 +56,13 @@ class HouseSigmaScraper:
         return all_listings
 
     def get_data(self, listing_url):
+
         self.driver.get(listing_url)
         time.sleep(5)
         soup=BeautifulSoup(self.driver.page_source, 'lxml')
-        items = {}
+        items = {"link": listing_url}
+
         for div in soup.select('div.item'):
-            # items[div.h2.text] = div.span.text
             if(div.find("h2") and div.find("span")):
                 items[div.find("h2").string] = div.find("span").string
             print(div)
@@ -72,7 +73,10 @@ class HouseSigmaScraper:
 
     def write_data_to_file(self, data):
         with open("./data/extracted_{}.json".format(self.state), "w") as output:
-            json.dump(json.dumps(data), output)
+            for item in data:
+                json.dump(json.dumps(item), output)
+                output.write("\n")
+
 
 
 
@@ -81,8 +85,3 @@ class HouseSigmaScraper:
 
 # test_url = "https://housesigma.com/web/en/house/aD6p781zvPr3wRQr/6680-93-Hwy-County-Rd-Tay-L0K2E0-S5818021-S5818021-40343185"
 scraper = HouseSigmaScraper('sold')
-data = scraper.get_data_list()
-scraper.write_data_to_file(data)
-
-# import os
-# print(os.getcwd())
