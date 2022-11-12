@@ -2,10 +2,11 @@ from typing import Dict
 import requests
 from bs4 import BeautifulSoup
 import lxml.html
+import datetime
 import requests
-from csv import writer
 import time
 import random
+import boto3
 from lxml import etree as et
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -15,7 +16,6 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import json
-import browser_cookie3
 from login_credentials import username,password
 
 
@@ -86,6 +86,13 @@ class HouseSigmaScraper:
             for item in data:
                 json.dump(json.dumps(item), output)
                 output.write("\n")
+    def upload_to_s3(filename="./data/extracted_sold.json"):
+        s3 = boto3.client("s3")
+        s3.upload_file(
+            Filename=filename,
+            Bucket="hehousesigmaproj",
+            Key="housesigma_download_{}.json".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")),
+        )
 
 
 
@@ -94,10 +101,7 @@ class HouseSigmaScraper:
 
 
 # test_url = "https://housesigma.com/web/en/house/aD6p781zvPr3wRQr/6680-93-Hwy-County-Rd-Tay-L0K2E0-S5818021-S5818021-40343185"
-scraper = HouseSigmaScraper('sold')
-scraper.login()
-data = scraper.get_all_data()
-scraper.write_data_to_file(data)
+HouseSigmaScraper.upload_to_s3()
 
 
 
