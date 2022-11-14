@@ -101,7 +101,11 @@ class HouseSigmaScraper:
 
 
 # test_url = "https://housesigma.com/web/en/house/aD6p781zvPr3wRQr/6680-93-Hwy-County-Rd-Tay-L0K2E0-S5818021-S5818021-40343185"
-HouseSigmaScraper.upload_to_s3()
+if __name__ == "__main__":
+    scrape = HouseSigmaScraper()
+    data = scrape.get_all_data()
+    scrape.write_data_to_file(data)
+    HouseSigmaScraper.upload_to_s3()
 
 
 
