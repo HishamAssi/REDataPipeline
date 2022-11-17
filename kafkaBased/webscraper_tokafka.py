@@ -22,21 +22,37 @@ from kafka_producer import kafka_producer
 
 
 class HouseSigmaScraper:
+
     states: Dict[str, str] = {'sold': 'justsold', 'listed': 'newlylisted'}
 
     def __init__(self, state='sold', timeout=5, topic="housesigmascraper"):
+        """Creates the webdriver for scraping HouseSigma.com and a kafka producer.
+
+        :param state: sold or listed - decides whether to scrape the site for sold data or newly listed data.
+        :param timeout: timeout for page loading, maximum of 5 seconds.
+        :param topic: topic name
+        """
         self.url = "https://housesigma.com/web/en/recommend/more/{}".format(self.states[state])
         chrome_options = Options()
+        # Allows cookies to be stored so login is not required every time.
         chrome_options.add_argument("user-data-dir=selenium")
         self.driver=webdriver.Chrome(options=chrome_options)
         self.state = state
         self.timeout = timeout
-        conf = kafka_producer.read_ccloud_config("/Users/hisham/PycharmProjects/pythonProject/venv/proj/KafkaDevConfig.properties")
+        conf = kafka_producer.\
+            read_ccloud_config("/Users/hisham/PycharmProjects/pythonProject/venv/proj/credentials/KafkaDevConfig.properties")
         self.producer = kafka_producer(conf)
         self.topic = topic
+        # Create topic only if it doesn't exist
         kafka_producer.create_topic(conf, topic)
 
     def login(self):
+        """
+        login if needed
+        login_credentials.py should be in the same folder, containing two variables, username and password.
+
+        :return: None - the webdriver should be logged in afterwards.
+        """
         try:
             print("logging in")
             self.driver.get(self.url)
@@ -53,6 +69,11 @@ class HouseSigmaScraper:
 
 
     def get_all_data(self):
+        """
+        gets a list of all links to properties whether sold or listed, iterates through it, executing get_data to
+        obtain all the information.
+        :return: None - JSON info for the links is written to Kafka.
+        """
         print("getting data")
         self.driver.get(self.url)
         try:
@@ -63,17 +84,20 @@ class HouseSigmaScraper:
         soup = BeautifulSoup(self.driver.page_source, 'lxml')
 
         all_links = soup.select('div.el-card__body')
-        print(all_links)
-        all_listings = []
+        print("links found: " + str(len(all_links)))
         domain = "https://housesigma.com"
         for div in all_links:
             url = domain+div.find('a')['href']
             self.producer.produce_data(json.dumps(self.get_data(url)), url, self.topic)
             # all_listings.append(self.get_data(domain+div.find('a')['href']))
         self.producer.flush()
-        return all_listings
 
     def get_data(self, listing_url):
+        """
+        gets all data for a specific listing.
+        :param listing_url: housesigma url for a specific address
+        :return: Dict - all details about the url.
+        """
         print("getting data for: " + listing_url)
         self.driver.get(listing_url)
         try:
@@ -88,20 +112,6 @@ class HouseSigmaScraper:
             if(div.find("h2") and div.find("span")):
                 items[div.find("h2").string] = div.find("span").string
         return items
-
-    def write_data_to_file(self, data):
-        with open("./data/extracted_{}.json".format(self.state), "w") as output:
-            for item in data:
-                json.dump(json.dumps(item), output)
-                output.write("\n")
-
-    def upload_to_s3(filename="./data/extracted_sold.json"):
-        s3 = boto3.client("s3")
-        s3.upload_file(
-            Filename=filename,
-            Bucket="hehousesigmaproj",
-            Key="housesigma_download_{}.json".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")),
-        )
 
 
 if __name__ == "__main__":

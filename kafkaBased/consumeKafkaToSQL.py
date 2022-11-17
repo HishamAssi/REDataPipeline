@@ -4,6 +4,27 @@ from confluent_kafka import Consumer, KafkaError
 from kafka_producer import kafka_producer
 import json
 import certifi
+import psycopg2
+import sqlalchemy
+
+class postgres_write():
+
+    def __init__(self, hostname, port=5432, username, password):
+        self.psql_engine = psycopg2.connect( database="postgres",
+                                             user="",
+                                             password="",
+                                             host="",
+                                             port=''
+                                             )
+
+    def write_message(self, tablename, message):
+        self.psql_engine
+
+    def create_table(self, ddl, tablename="sold_data"):
+        cur = self.psql_engine.cursor()
+        cur.execute(ddl)
+        self.psql_engine.commit()
+        self.psql_engine.close()
 
 class kafka_consumer():
 
@@ -48,7 +69,7 @@ class kafka_consumer():
 
 
 if __name__ == "__main__":
-    consumer = kafka_consumer("/Users/hisham/PycharmProjects/pythonProject/venv/proj/KafkaDevConfig.properties",
+    consumer = kafka_consumer("/Users/hisham/PycharmProjects/pythonProject/venv/proj/credentials/KafkaDevConfig.properties",
                               "housesigmascraper")
     consumer.subscribe_to_topic()
 

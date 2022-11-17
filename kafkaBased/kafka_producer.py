@@ -5,12 +5,12 @@ import requests
 import json
 import certifi
 
+
 class kafka_producer():
 
     def __init__(self, conf):
         self.producer = Producer(conf)
         self.delivered_records = 0
-
 
     def read_ccloud_config(config_file):
         """Read Confluent Cloud configuration for librdkafka clients"""
@@ -39,7 +39,8 @@ class kafka_producer():
         fs = a.create_topics([NewTopic(
             topic,
             num_partitions=1,
-            replication_factor=3
+            replication_factor=3,
+            config={"cleanup.policy": "compact"}
         )])
         for topic, f in fs.items():
             try:
@@ -56,12 +57,7 @@ class kafka_producer():
 
         self.producer.produce(topic, key=msg_key, value=json)
 
-
-
     def flush(self):
-
         self.producer.flush()
-
-
 
 # cert location: '/Users/hisham/PycharmProjects/pythonProject/venv/lib/python3.10/site-packages/certifi/cacert.pem'
