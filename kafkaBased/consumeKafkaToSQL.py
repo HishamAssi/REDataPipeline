@@ -10,6 +10,13 @@ import sqlalchemy
 class postgres_write():
 
     def __init__(self, hostname, port=5432, username, password):
+        """
+
+        :param hostname:
+        :param port:
+        :param username:
+        :param password:
+        """
         self.psql_engine = psycopg2.connect( database="postgres",
                                              user="",
                                              password="",
@@ -21,6 +28,7 @@ class postgres_write():
         self.psql_engine
 
     def create_table(self, ddl, tablename="sold_data"):
+        #Must figure out an easy way to produce table ddl.
         cur = self.psql_engine.cursor()
         cur.execute(ddl)
         self.psql_engine.commit()
