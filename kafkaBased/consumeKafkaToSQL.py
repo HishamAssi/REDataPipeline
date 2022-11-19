@@ -31,28 +31,43 @@ class postgres_write():
         with open("/Users/hisham/PycharmProjects/pythonProject/venv/proj/data/extracted_sold.json", "r") as json_file:
             lines = json_file.readlines()[0]
             data = json.loads(json.loads(lines))
+
         data_types = data.values()
-        column_names = data.keys()
+        print(data_types)
+        column_names = list(data.keys())
         ddl_types = []
         for value in data_types:
-            if re.search('[a-zA-Z]', value):
+            if value is not None:
+                if re.search('[a-zA-Z\s]', value):
+                    ddl_types.append("varchar(255)")
+                elif '-' in value:
+                    ddl_types.append("date")
+                elif '.' in value:
+                    ddl_types.append("float")
+                elif re.search('[0-9]', value):
+                    ddl_types.append("int")
+            else:
                 ddl_types.append("varchar(255)")
-            elif '-' in value:
-                ddl_types.append("date")
-            elif '.' in value:
-                ddl_types.append("float")
-            elif re.search('[0-9]', value):
-                ddl_types.append("int")
+        for column in range(len(column_names)):
+            column_names[column] = re.sub(r'\W+', '', column_names[column])
+
+        create_statement = "CREATE TABLE IF NOT EXISTS housesigma_sold (\n"
+        for i in range(len(ddl_types) - 1):
+            create_statement = create_statement + column_names[i][:-1] + " " + ddl_types[i] + ",\n"
+        create_statement += column_names[-1] + " " + ddl_types[-1] + "\n"
+        create_statement += ");"
+
+        return create_statement
 
 
-
-        print(data.values())
+        # print(data.values())
 
     def write_message(self, tablename, message):
-        self.psql_engine
+        print("nothing")
 
-    def create_table(self, ddl, tablename="sold_data"):
+    def create_table(self, ddl):
         #Must figure out an easy way to produce table ddl.
+        print(ddl)
         cur = self.psql_engine.cursor()
         cur.execute(ddl)
         self.psql_engine.commit()
@@ -105,4 +120,5 @@ if __name__ == "__main__":
     #                           "housesigmascraper")
     # consumer.subscribe_to_topic()
     postgres_con = postgres_write()
-    postgres_con.create_ddl()
+    ddl = postgres_con.create_ddl()
+    postgres_con.create_table(ddl)
