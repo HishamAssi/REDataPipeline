@@ -52,17 +52,21 @@ class postgres_write():
     def create_datatypes(self, data_types):
         ddl_types = []
         for value in data_types:
+            print(value)
             if value is not None:
                 if re.search('[a-zA-Z\s]', value):
                     ddl_types.append("varchar(255)")
-                elif '-' in value:
+                elif '-' in value and re.search('[0-9]', value):
                     ddl_types.append("date")
                 elif '.' in value:
                     ddl_types.append("float")
                 elif re.search('[0-9]', value):
                     ddl_types.append("int")
+                else:
+                    ddl_types.append("varchar(255)")
             else:
                 ddl_types.append("varchar(255)")
+            print(len(ddl_types))
         return ddl_types
 
     def write_message(self, message, tablename="housesigma_sold"):
