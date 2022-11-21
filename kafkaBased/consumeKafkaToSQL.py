@@ -33,8 +33,23 @@ class postgres_write():
             data = json.loads(json.loads(lines))
 
         data_types = data.values()
-        print(data_types)
         column_names = list(data.keys())
+        assert (len(data_types) == len(column_names))
+        ddl_types = self.create_datatypes(data_types)
+        for column in range(len(column_names)):
+            column_names[column] = re.sub(r'\W+', '', column_names[column])
+        create_statement = "CREATE TABLE IF NOT EXISTS housesigma_sold (\n"
+        for i in range(len(ddl_types) - 1):
+            create_statement = create_statement + column_names[i] + " " + ddl_types[i] + ",\n"
+        create_statement += column_names[-1] + " " + ddl_types[-1] + "\n"
+        create_statement += ");"
+
+        return create_statement
+
+
+        # print(data.values())
+
+    def create_datatypes(self, data_types):
         ddl_types = []
         for value in data_types:
             if value is not None:
@@ -48,21 +63,10 @@ class postgres_write():
                     ddl_types.append("int")
             else:
                 ddl_types.append("varchar(255)")
-        for column in range(len(column_names)):
-            column_names[column] = re.sub(r'\W+', '', column_names[column])
+        return ddl_types
 
-        create_statement = "CREATE TABLE IF NOT EXISTS housesigma_sold (\n"
-        for i in range(len(ddl_types) - 1):
-            create_statement = create_statement + column_names[i][:-1] + " " + ddl_types[i] + ",\n"
-        create_statement += column_names[-1] + " " + ddl_types[-1] + "\n"
-        create_statement += ");"
+    def write_message(self, message, tablename="housesigma_sold"):
 
-        return create_statement
-
-
-        # print(data.values())
-
-    def write_message(self, tablename, message):
         print("nothing")
 
     def create_table(self, ddl):
