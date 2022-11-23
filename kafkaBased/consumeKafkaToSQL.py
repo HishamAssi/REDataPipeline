@@ -8,6 +8,7 @@ import psycopg2
 import sqlalchemy
 import login_credentials
 import re
+from ddlgenerator.ddlgenerator import Table
 
 class postgres_write():
 
@@ -25,53 +26,26 @@ class postgres_write():
                                              host=login_credentials.db_hostname,
                                              port=login_credentials.db_port
                                              )
-
+        self.table_name = 'housesigma_sold'
     def create_ddl(self):
         # transform json to dict
         with open("/Users/hisham/PycharmProjects/pythonProject/venv/proj/data/extracted_sold.json", "r") as json_file:
             lines = json_file.readlines()[0]
             data = json.loads(json.loads(lines))
 
-        data_types = data.values()
-        column_names = list(data.keys())
-        assert (len(data_types) == len(column_names))
-        ddl_types = self.create_datatypes(data_types)
-        for column in range(len(column_names)):
-            column_names[column] = re.sub(r'\W+', '', column_names[column])
-        create_statement = "CREATE TABLE IF NOT EXISTS housesigma_sold (\n"
-        for i in range(len(ddl_types) - 1):
-            create_statement = create_statement + column_names[i] + " " + ddl_types[i] + ",\n"
-        create_statement += column_names[-1] + " " + ddl_types[-1] + "\n"
-        create_statement += ");"
+        table = Table([data], table_name=self.table_name)
+        sql = table.sql('postgresql')
 
-        return create_statement
+        return sql
 
 
-        # print(data.values())
+    def write_message(self, message):
+        table = Table([message], table_name=self.table_name)
+        sql = table.sql('postgresql', creates=False, inserts=True)
+        cur = self.psql_engine.cursor()
+        cur.execute(sql)
+        self.psql_engine.commit()
 
-    def create_datatypes(self, data_types):
-        ddl_types = []
-        for value in data_types:
-            print(value)
-            if value is not None:
-                if re.search('[a-zA-Z\s]', value):
-                    ddl_types.append("varchar(255)")
-                elif '-' in value and re.search('[0-9]', value):
-                    ddl_types.append("date")
-                elif '.' in value:
-                    ddl_types.append("float")
-                elif re.search('[0-9]', value):
-                    ddl_types.append("int")
-                else:
-                    ddl_types.append("varchar(255)")
-            else:
-                ddl_types.append("varchar(255)")
-            print(len(ddl_types))
-        return ddl_types
-
-    def write_message(self, message, tablename="housesigma_sold"):
-
-        print("nothing")
 
     def create_table(self, ddl):
         #Must figure out an easy way to produce table ddl.
@@ -89,6 +63,7 @@ class kafka_consumer():
         # conf['auto.offset.reset'] = 'earliest'
         self.consumer = Consumer(conf)
         self.topic = topic
+        self.db_writer = postgres_write()
 
     def subscribe_to_topic(self):
         # Subscribe to topic
@@ -112,7 +87,10 @@ class kafka_consumer():
                     # Check for Kafka message
                     record_key = msg.key()
                     record_value = msg.value()
+                    record_value_dict = json.loads(record_value.decode('utf-8'))
                     total_count += 1
+                    print(record_value_dict)
+                    self.db_writer.write_message(record_value_dict)
                     print("Consumed record with key {} and value {}, \
                              and updated total count to {}"
                           .format(record_key, record_value, total_count))
@@ -124,9 +102,12 @@ class kafka_consumer():
 
 
 if __name__ == "__main__":
-    # consumer = kafka_consumer("/Users/hisham/PycharmProjects/pythonProject/venv/proj/credentials/KafkaDevConfig.properties",
-    #                           "housesigmascraper")
-    # consumer.subscribe_to_topic()
-    postgres_con = postgres_write()
-    ddl = postgres_con.create_ddl()
-    postgres_con.create_table(ddl)
+    # postgres_con = postgres_write()
+    # ddl = postgres_con.create_ddl()
+    # print(ddl)
+    # postgres_con.create_table(ddl)
+    consumer = kafka_consumer("/Users/hisham/PycharmProjects/pythonProject/venv/proj/credentials/KafkaDevConfig.properties",
+                              "housesigmascraper")
+    consumer.subscribe_to_topic()
+
+

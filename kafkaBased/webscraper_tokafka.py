@@ -7,6 +7,7 @@ import requests
 import time
 import random
 import boto3
+import re
 from lxml import etree as et
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -106,11 +107,12 @@ class HouseSigmaScraper:
         except TimeoutException:
             print("Timed out waiting for page to load")
         soup=BeautifulSoup(self.driver.page_source, 'lxml')
-        items = {"link": listing_url}
+        items = {"Link": listing_url}
 
         for div in soup.select('div.item'):
             if(div.find("h2") and div.find("span")):
-                items[div.find("h2").string] = div.find("span").string
+                key = re.sub('[^0-9a-zA-Z_]+', '', div.find("h2").string)
+                items[key] = div.find("span").string
         return items
 
 

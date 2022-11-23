@@ -7,6 +7,7 @@ import requests
 import time
 import random
 import boto3
+import re
 from lxml import etree as et
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -77,12 +78,15 @@ class HouseSigmaScraper:
 
         for div in soup.select('div.item'):
             if(div.find("h2") and div.find("span")):
-                items[div.find("h2").string] = div.find("span").string
+                value = div.find("span").string
+                key = re.sub('[^0-9a-zA-Z_]+', '', div.find("h2").string)
+                items[key] = value
             # print(div.find())
+
         return items
 
     def write_data_to_file(self, data):
-        with open("./data/extracted_{}.json".format(self.state), "w") as output:
+        with open("../data/extracted_{}.json".format(self.state), "w") as output:
             for item in data:
                 json.dump(json.dumps(item), output)
                 output.write("\n")
@@ -103,9 +107,10 @@ class HouseSigmaScraper:
 # test_url = "https://housesigma.com/web/en/house/aD6p781zvPr3wRQr/6680-93-Hwy-County-Rd-Tay-L0K2E0-S5818021-S5818021-40343185"
 if __name__ == "__main__":
     scrape = HouseSigmaScraper()
+    scrape.login()
     data = scrape.get_all_data()
     scrape.write_data_to_file(data)
-    HouseSigmaScraper.upload_to_s3()
+    # HouseSigmaScraper.upload_to_s3()
 
 
 
