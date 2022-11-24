@@ -26,14 +26,14 @@ class postgres_write():
                                              host=login_credentials.db_hostname,
                                              port=login_credentials.db_port
                                              )
-        self.table_name = 'housesigma_sold'
-    def create_ddl(self):
+        self.table_name = 'housesigmasold'
+    def create_ddl(self, message):
         # transform json to dict
-        with open("/Users/hisham/PycharmProjects/pythonProject/venv/proj/data/extracted_sold.json", "r") as json_file:
-            lines = json_file.readlines()[0]
-            data = json.loads(json.loads(lines))
+        # with open("/Users/hisham/PycharmProjects/pythonProject/venv/proj/data/extracted_sold.json", "r") as json_file:
+        #     lines = json_file.readlines()[0]
+        #     data = json.loads(json.loads(lines))
 
-        table = Table([data], table_name=self.table_name)
+        table = Table([message], table_name=self.table_name)
         sql = table.sql('postgresql')
 
         return sql
@@ -42,6 +42,8 @@ class postgres_write():
     def write_message(self, message):
         table = Table([message], table_name=self.table_name)
         sql = table.sql('postgresql', creates=False, inserts=True)
+        # sql = sql.replace(self.table_name, 'public.'+self.table_name)
+        print(sql)
         cur = self.psql_engine.cursor()
         cur.execute(sql)
         self.psql_engine.commit()
@@ -71,6 +73,7 @@ class kafka_consumer():
 
         # Process messages
         total_count = 0
+        table_exists = False
         try:
             while True:
                 msg = self.consumer.poll(1.0)
@@ -85,11 +88,15 @@ class kafka_consumer():
                     print('error: {}'.format(msg.error()))
                 else:
                     # Check for Kafka message
+
                     record_key = msg.key()
                     record_value = msg.value()
                     record_value_dict = json.loads(record_value.decode('utf-8'))
                     total_count += 1
                     print(record_value_dict)
+                    # if not table_exists:
+                    #     self.db_writer.create_table(self.db_writer.create_ddl(record_value_dict))
+                    #     table_exists = True
                     self.db_writer.write_message(record_value_dict)
                     print("Consumed record with key {} and value {}, \
                              and updated total count to {}"
